@@ -1,0 +1,19 @@
+name: gis-disaster-agent
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - geopandas
+  - rasterio
+  - gdal
+  - shapely
+  - pyproj
+  - fiona
+  - rasterstats
+  # installed via conda-forge, not pip -- its native pango/cairo deps need
+  # to live in the env's own lib/ dir to be found by dlopen (see plan.md's
+  # Mac install-pain note; this is the WeasyPrint version of that problem)
+  - weasyprint
+  - pip
+  - pip:
+      - -r requirements.txt

@@ -1,0 +1,32 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.coverage
+htmlcov/
+
+# geospatial data caches / generated outputs -- never commit these
+/data/raw/*
+!/data/raw/.gitkeep
+/data/cache/
+/data/sample/*
+!/data/sample/.gitkeep
+/outputs/
+
+# rag_corpus/*.md are authored sample reference docs, tracked intentionally;
+# anything else dropped here (large user-supplied reports, etc.) is not
+/rag_corpus/*
+!/rag_corpus/*.md
+!/rag_corpus/.gitkeep
+
+# GEE service account key -- never commit
+*.json
+!package.json
+
+# local Postgres data volume (Phase 3+)
+/docker/postgres/data/

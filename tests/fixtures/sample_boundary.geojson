@@ -1,0 +1,26 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Madhuban",
+        "name_normalized": "madhuban",
+        "admin_level": 3,
+        "gadm_uid": "sample-fixture-madhuban"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [87.20, 26.60],
+            [87.30, 26.60],
+            [87.30, 26.68],
+            [87.20, 26.68],
+            [87.20, 26.60]
+          ]
+        ]
+      }
+    }
+  ]
+}
