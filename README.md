@@ -1,60 +1,54 @@
 # GIS Disaster Analysis Agent
 
-Takes a natural-language query (e.g. "Analyze forest loss in Madhuban from 2005-2020
-and identify areas with increased disaster risk") and autonomously retrieves
-datasets, runs GIS change-detection analysis, predicts disaster risk, generates
-a map, and saves a report.
+An AI agent that turns a natural-language query — e.g. "Analyze forest loss in Madhuban
+from 2005-2020 and identify areas with increased disaster risk" — into a full geospatial
+analysis: it resolves the place name, retrieves land-cover and terrain data, runs
+change-detection and slope/rainfall analysis, scores disaster risk, and produces an
+interactive map plus a PDF report.
 
-See [`plan.md`](./plan.md) for the full architecture and phased build order. All 6 phases
-are code-complete; see plan.md for exactly what's been verified against real local infra
-vs. what's blocked on `ANTHROPIC_API_KEY`/GEE credentials.
+## Features
+
+- **Natural-language queries** — parses place name, date range, and analysis type from free text
+- **Boundary resolution** — PostGIS-backed, with fuzzy matching and ambiguity detection for same-named locations
+- **Remote sensing** — Google Earth Engine integration (Hansen Global Forest Change, Dynamic World) with local caching
+- **GIS analysis** — forest-loss/land-cover change detection, slope derivation, zonal statistics
+- **Transparent risk scoring** — a weighted composite index with a per-factor explanation, not a black-box model
+- **Retrieval-grounded reporting** — narrative generation draws on a reference-document corpus via RAG
+- **Interactive + static maps** and a PDF report with an explicit methodology/limitations section
+
+## Tech stack
+
+Python, LangGraph, GeoPandas, Rasterio, GDAL, PostGIS + pgvector, Google Earth Engine API, Folium, WeasyPrint.
 
 ## Setup
 
-The geospatial stack (GDAL/rasterio/geopandas/WeasyPrint) is installed via conda-forge,
-not pip, to avoid the Mac binary-mismatch issues those packages are notorious for.
+The geospatial stack is installed via conda-forge to avoid platform binary-compatibility issues.
 
 ```bash
 mamba env create -f environment.yml
 mamba activate gis-disaster-agent
 cp .env.example .env
-# fill in ANTHROPIC_API_KEY (required for everything), GEE_SERVICE_ACCOUNT_EMAIL/_JSON
-# (Phase 2+, optional -- falls back to sample data without it) in .env
-python scripts/generate_sample_data.py   # synthetic t1/t2 land-cover, DEM, rainfall rasters
-```
+# add ANTHROPIC_API_KEY at minimum; GEE credentials are optional (falls back to sample data)
 
-### PostGIS + pgvector
+python scripts/generate_sample_data.py
 
-```bash
 cd docker && docker-compose build postgis && docker-compose up -d postgis && cd ..
 python scripts/init_postgis_schema.py
-python scripts/load_gadm_nepal.py        # synthetic Nepal municipality fixture set
-python scripts/ingest_rag_docs.py        # Phase 6: sample RAG corpus
+python scripts/load_gadm_nepal.py
+python scripts/ingest_rag_docs.py
 ```
 
-## Demos
+## Usage
 
-**Phase 1/2/3/4/5 -- full pipeline, sample data + real PostGIS boundary resolution:**
 ```bash
 python -m src.main run-query "Analyze forest loss in Madhuban from 2005-2020"
 ```
-Produces `outputs/<job_id>/report.pdf` (risk-colored map + narrative) and
-`outputs/<job_id>/maps/interactive_map.html`.
 
-**Phase 2 with real GEE** (needs `GEE_SERVICE_ACCOUNT_EMAIL`/`_JSON` and the service account
-registered for Earth Engine access in the GEE console):
-```bash
-python -m src.main run-query "Analyze land cover change in Itahari from 2018-2023"
-```
-`land_cover_change` queries with real credentials configured fetch live Dynamic World
-imagery instead of sample rasters; `forest_loss` queries always use sample data for now
-(see plan.md's note on why Hansen's lossyear encoding doesn't fit the current
-change-detection algorithm).
+Produces `outputs/<job_id>/report.pdf` and an interactive map at
+`outputs/<job_id>/maps/interactive_map.html`.
 
 ## Tests
 
 ```bash
 pytest
 ```
-Needs the `gis-disaster-agent-postgis` container running for the integration suite;
-GEE/Docker-independent unit tests run regardless.
