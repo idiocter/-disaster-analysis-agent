@@ -1,0 +1,23 @@
+services:
+  postgis:
+    build:
+      context: ./postgres
+      dockerfile: Dockerfile
+    container_name: gis-disaster-agent-postgis
+    environment:
+      POSTGRES_USER: gis
+      POSTGRES_PASSWORD: gis
+      POSTGRES_DB: gis_disaster_agent
+    ports:
+      - "5434:5432"  # 5432/5433 already used by other local projects
+    volumes:
+      - ./init-db:/docker-entrypoint-initdb.d:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gis -d gis_disaster_agent"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
