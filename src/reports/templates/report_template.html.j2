@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>GIS Disaster Analysis Report -- {{ zone_name }}</title>
+<style>
+  body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #1a1a1a; margin: 2em; }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #2563eb; padding-bottom: 0.3em; }
+  h2 { font-size: 1.2em; margin-top: 1.8em; color: #1e3a8a; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+  th, td { border: 1px solid #ccc; padding: 0.5em 0.8em; text-align: left; }
+  th { background: #f1f5f9; }
+  .limitations { background: #fef9c3; border-left: 4px solid #ca8a04; padding: 0.8em 1em; }
+  .risk-high { color: #dc2626; font-weight: bold; }
+  .risk-medium { color: #ca8a04; font-weight: bold; }
+  .risk-low { color: #16a34a; font-weight: bold; }
+  img.static-map { max-width: 100%; border: 1px solid #ccc; }
+</style>
+</head>
+<body>
+
+<h1>GIS Disaster Analysis Report</h1>
+<p><strong>Area:</strong> {{ zone_name }} &nbsp;|&nbsp; <strong>Period:</strong> {{ date_start }} to {{ date_end }} &nbsp;|&nbsp; <strong>Generated:</strong> {{ generated_at }}</p>
+
+<h2>Executive Summary</h2>
+<p>{{ narrative_text }}</p>
+
+<h2>Study Area &amp; Data Sources</h2>
+<ul>
+  <li>Boundary source: {{ boundary_source }}</li>
+  <li>Land-cover data: {{ dataset_note }}</li>
+</ul>
+
+<h2>Land-Cover Change Results</h2>
+<table>
+  <tr><th>Metric</th><th>Value</th></tr>
+  <tr><td>Forest loss</td><td>{{ gis_results.forest_loss_ha }} ha ({{ gis_results.forest_loss_pct }}%)</td></tr>
+</table>
+
+{% if static_map_path %}
+<img class="static-map" src="{{ static_map_path }}" alt="Study area map">
+{% endif %}
+
+<h2>Disaster Risk Assessment</h2>
+<table>
+  <tr><th>Zone</th><th>Risk score</th><th>Risk class</th></tr>
+  {% for risk in risk_results %}
+  <tr>
+    <td>{{ risk.zone_name }}</td>
+    <td>{{ risk.risk_score }}/100</td>
+    <td class="risk-{{ risk.risk_class|lower|replace(' ', '-') }}">{{ risk.risk_class }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% for explanation in risk_explanations %}
+<p>{{ explanation }}</p>
+{% endfor %}
+
+<h2>Methodology &amp; Limitations</h2>
+<div class="limitations">
+  <p>{{ limitations_note }}</p>
+</div>
+
+</body>
+</html>
