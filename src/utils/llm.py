@@ -14,6 +14,7 @@ from typing import Any
 from openai import OpenAI
 
 from src.config import settings
+from src.utils.usage import record_usage
 
 _client: OpenAI | None = None
 
@@ -57,6 +58,8 @@ def call_structured(
         tool_choice={"type": "function", "function": {"name": output_tool_name}},
     )
 
+    record_usage(model, response.usage.prompt_tokens, response.usage.completion_tokens)
+
     tool_calls = response.choices[0].message.tool_calls or []
     for call in tool_calls:
         if call.function.name == output_tool_name:
@@ -74,4 +77,5 @@ def call_text(*, model: str, system: str, user_content: str, max_tokens: int = 1
             {"role": "user", "content": user_content},
         ],
     )
+    record_usage(model, response.usage.prompt_tokens, response.usage.completion_tokens)
     return response.choices[0].message.content or ""
