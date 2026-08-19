@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.data.cache import cache_file_path, cache_raster, get_cached_raster
-from src.data.gee_datasets import select_dataset_for_analysis
+from src.data.gee_datasets import HANSEN_GFC, HANSEN_TREECOVER_BAND, select_dataset_for_analysis
 
 # Rough guard against Earth Engine's synchronous computePixels payload
 # limit (~32-50MB depending on API version/dtype). AOIs larger than this
@@ -142,3 +142,56 @@ def _write_geotiff(array: np.ndarray, bounds: tuple[float, float, float, float],
     }
     with rasterio.open(out_path, "w", **profile) as dst:
         dst.write(array, 1)
+
+
+async def fetch_hansen_bands(
+    session: AsyncSession,
+    *,
+    bounds: tuple[float, float, float, float],
+    date_start: str,
+    date_end: str,
+) -> tuple[str, str]:
+    """Fetch Hansen's lossyear and treecover2000 bands as two local GeoTIFFs.
+
+    Returned in the order detect_forest_loss_hansen expects. Both are cached
+    under the same AOI/date key but distinct dataset ids, so the two bands
+    never collide in raster_cache_index.
+    """
+    dataset = HANSEN_GFC
+    paths: list[str] = []
+
+    for band in (dataset.band, HANSEN_TREECOVER_BAND):
+        dataset_id = f"{dataset.asset_id}#{band}"
+        cached = await get_cached_raster(
+            session, dataset_id=dataset_id, bounds=bounds, date_start=date_start, date_end=date_end
+        )
+        if cached is not None:
+            paths.append(cached)
+            continue
+
+        pixel_count = _estimate_pixel_count(bounds, dataset.native_resolution_m)
+        if pixel_count > _MAX_SYNC_PIXELS:
+            raise ValueError(
+                f"AOI too large for a synchronous GEE fetch (~{pixel_count:,} pixels > "
+                f"{_MAX_SYNC_PIXELS:,}); needs the async Export.image.toDrive path."
+            )
+
+        ensure_initialized()
+        array = _fetch_pixels(dataset.asset_id, band, bounds)
+
+        out_path = cache_file_path(dataset_id, bounds, date_start, date_end)
+        Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+        _write_geotiff(array, bounds, out_path)
+
+        await cache_raster(
+            session,
+            dataset_id=dataset_id,
+            bounds=bounds,
+            date_start=date_start,
+            date_end=date_end,
+            resolution_m=dataset.native_resolution_m,
+            file_path=out_path,
+        )
+        paths.append(out_path)
+
+    return paths[0], paths[1]

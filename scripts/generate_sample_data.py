@@ -58,6 +58,7 @@ def main() -> None:
 
     _write_dem(transform)
     _write_rainfall(transform, rng)
+    _write_hansen(transform, rng)
 
 
 def _write_dem(transform) -> None:
@@ -107,6 +108,32 @@ def _write_rainfall(transform, rng: np.random.Generator) -> None:
         dst.write(rainfall, 1)
     print(f"wrote {path}")
 
+
+
+def _write_hansen(transform, rng: np.random.Generator) -> None:
+    """Hansen-shaped stand-ins so the lossyear code path is exercisable
+    without GEE credentials: `lossyear` holds 0 (never cleared) or a year
+    offset from 2000, `treecover2000` holds canopy percentage.
+    """
+    treecover = np.where(rng.random((SIZE, SIZE)) > 0.35, 80, 5).astype("uint8")
+
+    lossyear = np.zeros((SIZE, SIZE), dtype="uint8")
+    # A block cleared in 2008 and another in 2015, so a date-range filter has
+    # something to include and exclude rather than matching everything.
+    lossyear[10:25, 15:35] = 8
+    lossyear[30:40, 20:45] = 15
+    lossyear[np.logical_not(treecover >= 30)] = 0  # loss only where there was forest
+
+    for name, arr, nodata in (("hansen_lossyear.tif", lossyear, 255),
+                              ("hansen_treecover.tif", treecover, 255)):
+        profile = {
+            "driver": "GTiff", "height": SIZE, "width": SIZE, "count": 1,
+            "dtype": "uint8", "crs": "EPSG:4326", "transform": transform, "nodata": nodata,
+        }
+        path = OUT_DIR / name
+        with rasterio.open(path, "w", **profile) as dst:
+            dst.write(arr, 1)
+        print(f"wrote {path}")
 
 if __name__ == "__main__":
     main()
