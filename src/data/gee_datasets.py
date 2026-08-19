@@ -16,6 +16,10 @@ class GeeDataset:
     description: str
 
 
+# Hansen needs two bands read together: lossyear says *when* a pixel was
+# cleared, treecover2000 establishes what counted as forest to begin with.
+HANSEN_TREECOVER_BAND = "treecover2000"
+
 HANSEN_GFC = GeeDataset(
     asset_id="UMD/hansen/global_forest_change_2023_v1_11",
     band="lossyear",
