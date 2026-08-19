@@ -6,6 +6,26 @@ analysis: it resolves the place name, retrieves land-cover and terrain data, run
 change-detection and slope/rainfall analysis, scores disaster risk, and produces an
 interactive map plus a PDF report.
 
+## What it does
+
+You ask a question in plain English — *"Analyze forest loss in Itahari from 2005-2020 and
+identify areas with increased disaster risk."* It then:
+
+1. **Parses the sentence** into a place, a date range, and an analysis type
+2. **Finds the place** in a PostGIS boundary database, with fuzzy matching for typos — and
+   refuses to guess when two municipalities share a name
+3. **Pulls satellite data** (Hansen Global Forest Change, Dynamic World) for that exact area
+4. **Measures forest loss** in hectares and percentage, computed in an equal-area projection
+   so the figures aren't distorted by latitude
+5. **Derives terrain features** — slope from a DEM, rainfall averages over the zone
+6. **Scores disaster risk** from those factors, with a per-factor contribution breakdown
+7. **Draws maps** — an interactive HTML one and a static render for the report
+8. **Writes a PDF report**, drawing on a reference-document corpus so it explains *why* a
+   factor matters rather than only reporting the number
+
+The risk score is a transparent weighted index, presented as an indicative screening tool
+rather than a validated prediction — the report says so explicitly.
+
 ## Features
 
 - **Natural-language queries** — parses place name, date range, and analysis type from free text
