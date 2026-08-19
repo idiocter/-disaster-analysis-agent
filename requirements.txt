@@ -4,7 +4,7 @@
 
 # --- Phase 1: core orchestration, viz, report ---
 langgraph>=1.2  # pin floor to avoid resolving alongside a mismatched langgraph-checkpoint
-anthropic>=0.40
+openai>=1.40
 pydantic>=2
 pydantic-settings>=2
 python-dotenv>=1.0

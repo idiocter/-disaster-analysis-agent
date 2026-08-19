@@ -1,5 +1,8 @@
 # GIS Disaster Analysis Agent
 
+> **Branch note:** this `openai` branch runs on the OpenAI API (GPT models).
+> The `main` branch is the Anthropic/Claude version. Only the LLM layer differs.
+
 An AI agent that turns a natural-language query — e.g. "Analyze forest loss in Madhuban
 from 2005-2020 and identify areas with increased disaster risk" — into a full geospatial
 analysis: it resolves the place name, retrieves land-cover and terrain data, runs
@@ -28,7 +31,7 @@ The geospatial stack is installed via conda-forge to avoid platform binary-compa
 mamba env create -f environment.yml
 mamba activate gis-disaster-agent
 cp .env.example .env
-# add ANTHROPIC_API_KEY at minimum; GEE credentials are optional (falls back to sample data)
+# add OPENAI_API_KEY at minimum; GEE credentials are optional (falls back to sample data)
 
 python scripts/generate_sample_data.py
 

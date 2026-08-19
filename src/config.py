@@ -4,9 +4,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    anthropic_api_key: str = ""
-    parser_model: str = "claude-sonnet-5"
-    narrative_model: str = "claude-sonnet-5"
+    openai_api_key: str = ""
+    # Override in .env to whatever your account has access to -- nothing in
+    # the code depends on these specific model names.
+    parser_model: str = "gpt-4o-mini"
+    narrative_model: str = "gpt-4o"
 
     gee_service_account_email: str = ""
     gee_service_account_json: str = ""
