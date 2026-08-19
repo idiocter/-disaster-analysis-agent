@@ -8,6 +8,7 @@ from typing import Any
 import anthropic
 
 from src.config import settings
+from src.utils.usage import record_usage
 
 _client: anthropic.Anthropic | None = None
 
@@ -43,6 +44,8 @@ def call_structured(
         ],
         tool_choice={"type": "tool", "name": output_tool_name},
     )
+    record_usage(model, response.usage.input_tokens, response.usage.output_tokens)
+
     for block in response.content:
         if block.type == "tool_use" and block.name == output_tool_name:
             return block.input
@@ -57,4 +60,5 @@ def call_text(*, model: str, system: str, user_content: str, max_tokens: int = 1
         system=system,
         messages=[{"role": "user", "content": user_content}],
     )
+    record_usage(model, response.usage.input_tokens, response.usage.output_tokens)
     return "".join(block.text for block in response.content if block.type == "text")

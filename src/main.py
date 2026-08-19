@@ -10,6 +10,7 @@ import uuid
 import typer
 
 from src.graph.build_graph import build_graph
+from src.utils.usage import format_usage
 from src.graph.state import AgentState
 from src.utils.logging_config import configure_logging
 
@@ -63,6 +64,7 @@ def run_query(query: str) -> None:
     for line in final_state["rag_context"]:
         print(f"  {line}")
     print(f"\nnarrative:\n{final_state['narrative_text']}")
+    print(f"\n--- token usage ---\n{format_usage()}")
     print(f"\nreport: {final_state['report_path']}")
     if final_state["map_paths"]:
         print(f"interactive map: {final_state['map_paths']['interactive_html']}")
