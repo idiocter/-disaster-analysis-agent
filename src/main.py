@@ -17,6 +17,15 @@ from src.utils.logging_config import configure_logging
 app = typer.Typer()
 
 
+# Typer collapses a single-command app into the top-level invocation, which
+# silently drops the `run-query` name the docs and this module both specify.
+# Declaring a callback keeps it a command group so the documented interface
+# holds -- and leaves room for more commands later.
+@app.callback()
+def _cli() -> None:
+    """GIS disaster analysis agent."""
+
+
 @app.command("run-query")
 def run_query(query: str) -> None:
     configure_logging()
