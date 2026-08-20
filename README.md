@@ -36,6 +36,19 @@ You need three things:
 Google Earth Engine credentials are optional. Without them the agent uses built-in sample
 data, which is enough to see everything working.
 
+## Quick version
+
+If you have `make`, these are all you need:
+
+```bash
+make install                                              # create environment, install everything
+make up                                                   # start the map database, load its data
+make run Q="Analyze forest loss in Itahari from 2005-2020"
+```
+
+`make` on its own lists every command, and none of them need `mamba activate` first. The
+longer form is below if you'd rather run the steps yourself.
+
 ## Setup — do this once
 
 **1. Create the environment and install everything**
@@ -76,15 +89,14 @@ Setup is done. You won't need steps 3 and 4 again — the data stays in the cont
 
 ## How to run it
 
-**Every time you open a new terminal, activate the environment first:**
+```bash
+make run Q="Analyze forest loss in Itahari from 2005-2020"
+```
+
+`make` handles the environment for you. If you'd rather run it directly, activate first:
 
 ```bash
 mamba activate gis-disaster-agent
-```
-
-Then ask your question:
-
-```bash
 python -m src.main run-query "Analyze forest loss in Itahari from 2005-2020"
 ```
 
@@ -140,7 +152,7 @@ console — that's a separate step from creating the Google Cloud credentials.
 ## Running the tests
 
 ```bash
-pytest
+make test
 ```
 
 The map database needs to be running for the full set.
