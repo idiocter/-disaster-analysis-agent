@@ -18,6 +18,9 @@ from shapely.geometry import box
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from sqlalchemy import delete  # noqa: E402
+
+from src.data.models import AdminBoundary  # noqa: E402
 from src.data.postgis_repo import async_session_factory, insert_boundary  # noqa: E402
 
 # (name, district, admin_level, bbox) -- Madhuban's first bbox matches
@@ -34,6 +37,14 @@ _SYNTHETIC_MUNICIPALITIES = [
 
 async def main() -> None:
     async with async_session_factory() as session:
+        # Clear first so this is safe to re-run. Inserting unconditionally
+        # would duplicate every town, and a duplicated name resolves as
+        # ambiguous -- which would break every query for that town.
+        removed = (await session.execute(delete(AdminBoundary))).rowcount
+        await session.commit()
+        if removed:
+            print(f"cleared {removed} existing boundaries")
+
         for name, district, admin_level, bbox in _SYNTHETIC_MUNICIPALITIES:
             geometry = box(*bbox)
             await insert_boundary(
