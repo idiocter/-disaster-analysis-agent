@@ -1,112 +1,154 @@
 # GIS Disaster Analysis Agent
 
-An AI agent that turns a natural-language query — e.g. "Analyze forest loss in Madhuban
-from 2005-2020 and identify areas with increased disaster risk" — into a full geospatial
-analysis: it resolves the place name, retrieves land-cover and terrain data, runs
-change-detection and slope/rainfall analysis, scores disaster risk, and produces an
-interactive map plus a PDF report.
+Ask a question about a place in plain English. Get back a map and a PDF report about forest
+loss and disaster risk there.
 
-## What it does
+You type something like *"Analyze forest loss in Itahari from 2005-2020 and identify areas
+with increased disaster risk."* The agent works out which place you mean, pulls satellite
+data for it, measures how much forest was lost, checks the terrain and rainfall, scores the
+disaster risk, draws maps, and writes a report explaining what it found.
 
-You ask a question in plain English — *"Analyze forest loss in Itahari from 2005-2020 and
-identify areas with increased disaster risk."* It then:
+## What it does, step by step
 
-1. **Parses the sentence** into a place, a date range, and an analysis type
-2. **Finds the place** in a PostGIS boundary database, with fuzzy matching for typos — and
-   refuses to guess when two municipalities share a name
-3. **Pulls satellite data** (Hansen Global Forest Change, Dynamic World) for that exact area
-4. **Measures forest loss** in hectares and percentage, computed in an equal-area projection
-   so the figures aren't distorted by latitude
-5. **Derives terrain features** — slope from a DEM, rainfall averages over the zone
-6. **Scores disaster risk** from those factors, with a per-factor contribution breakdown
-7. **Draws maps** — an interactive HTML one and a static render for the report
-8. **Writes a PDF report**, drawing on a reference-document corpus so it explains *why* a
-   factor matters rather than only reporting the number
+1. **Reads your question** and pulls out the place, the dates, and what you want analysed
+2. **Finds the place** on a map — it copes with typos, and if two towns share a name it stops
+   and says so rather than guessing the wrong one
+3. **Gets satellite data** for that exact area
+4. **Measures the forest loss** in hectares and as a percentage
+5. **Checks the terrain** — how steep the land is, and how much rain it gets
+6. **Scores the disaster risk** and shows which factor contributed what
+7. **Draws the maps** — one you can click around, one for the report
+8. **Writes the PDF report**, explaining *why* each factor matters, not just the numbers
 
-The risk score is a transparent weighted index, presented as an indicative screening tool
-rather than a validated prediction — the report says so explicitly.
+The risk score is a simple weighted calculation, not a scientifically validated prediction.
+The report says so plainly.
 
-## Features
+## Before you start
 
-- **Natural-language queries** — parses place name, date range, and analysis type from free text
-- **Boundary resolution** — PostGIS-backed, with fuzzy matching and ambiguity detection for same-named locations
-- **Remote sensing** — Google Earth Engine integration (Hansen Global Forest Change, Dynamic World) with local caching
-- **GIS analysis** — forest-loss/land-cover change detection, slope derivation, zonal statistics
-- **Transparent risk scoring** — a weighted composite index with a per-factor explanation, not a black-box model
-- **Retrieval-grounded reporting** — narrative generation draws on a reference-document corpus via RAG
-- **Interactive + static maps** and a PDF report with an explicit methodology/limitations section
+You need three things:
 
-## Tech stack
+| | Why |
+|---|---|
+| **Docker Desktop** — open and running | the map database runs in a container |
+| **mamba or conda** | installs the mapping libraries, which don't install cleanly with pip |
+| **An Anthropic API key** | the AI that reads your question and writes the report |
 
-Python, LangGraph, GeoPandas, Rasterio, GDAL, PostGIS + pgvector, Google Earth Engine API, Folium, WeasyPrint.
+Google Earth Engine credentials are optional. Without them the agent uses built-in sample
+data, which is enough to see everything working.
 
-> An `openai` branch runs the same system on GPT models. Only the LLM layer differs.
+## Setup — do this once
 
-## Setup
-
-Requires Docker Desktop running. The geospatial stack is installed via conda-forge to avoid
-platform binary-compatibility issues.
+**1. Create the environment and install everything**
 
 ```bash
 mamba env create -f environment.yml
 mamba activate gis-disaster-agent
-cp .env.example .env
-# add ANTHROPIC_API_KEY; GEE credentials are optional (falls back to sample data)
 ```
 
-Then the one-time data setup — results persist in the Docker volume:
+**2. Add your key**
 
 ```bash
-python scripts/generate_sample_data.py     # synthetic land-cover, DEM, rainfall rasters
-
-cd docker && docker-compose up -d postgis && cd ..   # host port 5434
-python scripts/init_postgis_schema.py      # create tables
-python scripts/load_gadm_nepal.py          # load municipality boundaries
-python scripts/ingest_rag_docs.py          # embed rag_corpus/ into pgvector
+cp .env.example .env
 ```
 
-## Usage
+Open `.env` and fill in:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+**3. Make the sample map data**
+
+```bash
+python scripts/generate_sample_data.py
+```
+
+**4. Start the map database and fill it**
+
+```bash
+cd docker && docker-compose up -d postgis && cd ..
+python scripts/init_postgis_schema.py     # create the tables
+python scripts/load_gadm_nepal.py         # load the town boundaries
+python scripts/ingest_rag_docs.py         # load the reference documents
+```
+
+Setup is done. You won't need steps 3 and 4 again — the data stays in the container.
+
+## How to run it
+
+**Every time you open a new terminal, activate the environment first:**
+
+```bash
+mamba activate gis-disaster-agent
+```
+
+Then ask your question:
 
 ```bash
 python -m src.main run-query "Analyze forest loss in Itahari from 2005-2020"
 ```
 
-Writes to `outputs/<job_id>/`:
+Towns you can ask about right now: **Itahari**, **Butwal**, **Dhangadhi**, **Madhuban**.
 
-| File | Contents |
+### What you get
+
+Everything lands in a new folder under `outputs/`:
+
+| File | What it is |
 |---|---|
-| `report.pdf` / `report.html` | narrative, statistics, risk breakdown, methodology & limitations |
-| `maps/interactive_map.html` | Folium map, risk-colored with per-zone popups |
-| `maps/static_map.png` | Contextily basemap render, embedded in the report |
+| `report.pdf` | the full written report |
+| `report.html` | same thing, opens in a browser |
+| `maps/interactive_map.html` | a map you can click around — open it in your browser |
+| `maps/static_map.png` | a picture of the map, used inside the report |
 
-The run also prints the resolved intent, forest-loss figures, the risk breakdown, and a
-token/cost table. Results are persisted to the `job_history`, `gis_results`, and
-`risk_results` tables.
+The terminal also prints the forest-loss figures, the risk score with its breakdown, and what
+the run cost.
 
-### Using real Earth Engine data
+## Common problems
 
-Set `GEE_SERVICE_ACCOUNT_EMAIL` and `GEE_SERVICE_ACCOUNT_JSON`, and register that service
-account for Earth Engine access in the GEE console (a separate step from creating the GCP
-credentials).
+**`command not found: python` or missing packages**
+You forgot to activate the environment. Run `mamba activate gis-disaster-agent` first.
 
-Note that only `land_cover_change` queries currently use live imagery. `forest_loss` queries
-always fall back to sample rasters, because Hansen Global Forest Change encodes loss-year in
-a single static band rather than the two before/after snapshots the change-detection
-algorithm compares.
+**`Connect call failed ... 5434`**
+The map database isn't running. Start it with `cd docker && docker-compose up -d postgis`.
 
-## Configuration
+**`Cannot connect to the Docker daemon`**
+Docker Desktop isn't open. Start it and wait for the whale icon to settle.
 
-| Variable | Default | Effect |
-|---|---|---|
-| `PARSER_MODEL` / `NARRATIVE_MODEL` | Sonnet | model used for query parsing and narrative writing |
-| `DATABASE_URL` | localhost:5434 | PostGIS connection |
-| `DATA_CACHE_DIR` / `OUTPUTS_DIR` | `data/cache` / `outputs` | where rasters and reports land |
+**"boundary name is ambiguous"**
+Two towns share that name. This is deliberate — the agent won't guess. Ask about a different
+town for now.
 
-## Tests
+**`sample rasters not found`**
+Run `python scripts/generate_sample_data.py`.
+
+**`Got unexpected extra argument`**
+You left out `run-query`. The command is `python -m src.main run-query "your question"`.
+
+## Using real satellite data
+
+By default the agent uses sample data. For real Google Earth Engine imagery, add to `.env`:
+
+```
+GEE_SERVICE_ACCOUNT_EMAIL=...
+GEE_SERVICE_ACCOUNT_JSON=/path/to/key.json
+```
+
+You also have to register that service account for Earth Engine in the Google Earth Engine
+console — that's a separate step from creating the Google Cloud credentials.
+
+## Running the tests
 
 ```bash
 pytest
 ```
 
-The integration suite needs the `gis-disaster-agent-postgis` container running; unit tests
-run without it.
+The map database needs to be running for the full set.
+
+## Two versions
+
+- **`main`** — uses Claude (Anthropic)
+- **`openai`** — the same agent, using GPT instead
+
+Only the AI layer differs. Switch with `git checkout openai`, then re-run
+`pip install -r requirements.txt`.
