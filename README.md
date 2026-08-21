@@ -159,8 +159,9 @@ The map database needs to be running for the full set.
 
 ## Two versions
 
-- **`main`** — uses Claude (Anthropic)
+- **`anthropic`** (this branch) — uses Claude (Anthropic)
 - **`openai`** — the same agent, using GPT instead
 
 Only the AI layer differs. Switch with `git checkout openai`, then re-run
-`pip install -r requirements.txt`.
+`pip install -r requirements.txt`. The `main` branch holds no code — just an
+index pointing at these two.
